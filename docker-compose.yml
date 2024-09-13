@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /apps/unifi-db
+        source: $DB_ROOT_DIR
         target: /data/db
     networks:
       - unifi-bridge
@@ -88,7 +88,7 @@ services:
       start_period: 1m30s
     volumes:
       - type: bind
-        source: /apps/unifi
+        source: $UNIFI_ROOT_DIR
         target: /unifi
     networks:
       - unifi-bridge
