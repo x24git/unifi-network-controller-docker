@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+set -ex
+chown -R unifi:unifi /unifi /run/unifi

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -ex
+apt-get update
+apt-get install --no-install-recommends -y \
+    jsvc \
+    logrotate \
+    openjdk-17-jre-headless \
+    curl
+apt-get clean 
+rm -rf /var/lib/apt/lists/* 

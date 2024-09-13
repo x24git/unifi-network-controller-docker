@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -ex
+# create our folders
+mkdir -p \
+    /run/unifi/work/ROOT \
+    /unifi/{data,logs}
+
+# create symlinks for config
+symlinks=( \
+/usr/lib/unifi/data \
+/usr/lib/unifi/logs )
+
+for i in "${symlinks[@]}"; do
+    if [[ -L "$i" && ! "$i" -ef /unifi/"$(basename "$i")"  ]]; then
+        unlink "$i"
+    fi
+    if [[ ! -L "$i" ]]; then
+        ln -s /unifi/"$(basename "$i")" "$i"
+    fi
+done
+
+if [[ -L "/usr/lib/unifi/run" && ! "/usr/lib/unifi/run" -ef "/run/unifi"  ]]; then
+    unlink "/usr/lib/unifi/run"
+fi
+if [[ ! -L "/usr/lib/unifi/run" ]]; then
+    ln -s "/run/unifi" "/usr/lib/unifi/run"
+fi

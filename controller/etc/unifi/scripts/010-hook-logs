@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv bash
+# longrun=true
+
+if [ -n "${UNIFI_HOOK_LOGS}" ]; then
+    IFS='|' read -ra TAIL_LOGS <<< "$UNIFI_HOOK_LOGS"
+    echo "Hooking into log at: ${TAIL_LOGS[@]}"
+    tail -Fc0 "${TAIL_LOGS[@]}"
+else
+    echo "**** Env var UNIFI_HOOK_LOGS is not set, sleeping ****"
+fi

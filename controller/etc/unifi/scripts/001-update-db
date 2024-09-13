@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+file_env() {
+	local var="$1"
+	local fileVar="${var}_FILE"
+	local def="${2:-}"
+	if [ "${!var:-}" ] && [ "${!fileVar:-}" ]; then
+		echo >&2 "error: both $var and $fileVar are set (but are exclusive)"
+		exit 1
+	fi
+	local val="$def"
+	if [ "${!var:-}" ]; then
+		val="${!var}"
+	elif [ "${!fileVar:-}" ]; then
+		if [[ ! -f "${!fileVar}" ]]; then
+            echo "Error: File does not exist or is not a regular file: ${!fileVar}"
+            exit 1
+        fi
+        val="$(< "${!fileVar}")"
+	else
+       echo >&2 "error: both $var and $fileVar are unset" 
+       exit 1
+    fi
+    export "$var"="$val"
+    unset "$fileVar"
+}
+
+file_env "MONGO_PASS"
+defaultFile="/etc/unifi/defaults/system.properties"
+if [[ ! -e /unifi/data/system.properties ]]; then
+    cp -f $defaultFile /tmp/system.properties
+    echo "UNIFI controller starting for first time. Applying configured DB settings"
+else 
+    cp -f /unifi/data/system.properties /tmp/system.properties
+    mongo_uri=$(grep '^db.mongo.uri=' "$defaultFile" | cut -d'=' -f2-)
+    mongo_stat_uri=$(grep '^statdb.mongo.uri=' "$defaultFile" | cut -d'=' -f2-)
+    db_name=$(grep '^unifi.db.name=' "$defaultFile" | cut -d'=' -f2-)
+    if [ -z "$mongo_uri" ] || [ -z "$mongo_stat_uri" ] || [ -z "$db_name" ]; then
+        echo "$defaultFile not configured or missing!"
+        exit 1
+    fi
+    sed -i "s|^db.mongo.uri=.*|db.mongo.uri=$mongo_uri|" /tmp/system.properties
+    sed -i "s|^statdb.mongo.uri=.*|statdb.mongo.uri=$mongo_stat_uri|" /tmp/system.properties
+    sed -i "s|^unifi.db.name=.*|unifi.db.name=$db_name|" /tmp/system.properties
+    unset $mongo_uri
+    unset $mongo_stat_uri
+    unset $db_name
+fi
+
+if [[ -z "${MONGO_HOST}" ]]; then
+    echo "*** No MONGO_HOST set, cannot configure database settings. ***"
+    sleep infinity
+else
+    sed -i "s/~MONGO_USER~/${MONGO_USER}/" /tmp/system.properties
+    sed -i "s/~MONGO_HOST~/${MONGO_HOST}/" /tmp/system.properties
+    sed -i "s/~MONGO_PORT~/${MONGO_PORT}/" /tmp/system.properties
+    sed -i "s/~MONGO_DBNAME~/${MONGO_DBNAME}/" /tmp/system.properties
+    sed -i "s/~MONGO_PASS~/${MONGO_PASS}/" /tmp/system.properties
+    if [[ "${MONGO_TLS,,}" = "true" ]]; then
+        sed -i "s/~MONGO_TLS~/true/" /tmp/system.properties
+    else
+        sed -i "s/~MONGO_TLS~/false/" /tmp/system.properties
+    fi
+    if [[ -z "${MONGO_AUTHSOURCE}" ]]; then
+        sed -i "s/~MONGO_AUTHSOURCE~//" /tmp/system.properties
+    else
+        sed -i "s/~MONGO_AUTHSOURCE~/\&authSource=${MONGO_AUTHSOURCE}/" /tmp/system.properties
+    fi
+    if [[ -z "${INFORM_IP}" ]]; then
+        system_ip=$(grep '^system_ip=' "/tmp/system.properties" | cut -d'=' -f2-)
+        if [ ! -z "$system_ip" ]; then
+            sed -i "s|^system_ip=.*|system_ip=$INFORM_IP|" /tmp/system.properties
+        else
+            echo "system_ip=$INFORM_IP" >> /tmp/system.properties
+        fi
+        unset $system_ip
+    fi
+    mv -f /tmp/system.properties /unifi/data/system.properties
+fi

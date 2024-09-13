@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# create folders in mounted volume
+mkdir -p /unifi/{data,logs}

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+set -ex
+addgroup --gid $UNIFI_GID unifi 
+adduser --uid $UNIFI_UID --gid $UNIFI_GID --disabled-password --no-create-home --gecos "" unifi
