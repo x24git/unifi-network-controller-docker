@@ -1,0 +1,103 @@
+name: unifi-network-application
+services:
+  unifi-db:
+    container_name: unifi-db
+    image: docker.io/mongo:4.4
+    configs:
+      - source: init-mongo.js
+        target: /docker-entrypoint-initdb.d/init-mongo.js
+    environment:
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongodb_root_password
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_PASS_FILE: /run/secrets/mongodb_password
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: $DB_ROOT_DIR
+        target: /data/db
+    networks:
+      - unifi-bridge
+    privileged: false
+    secrets:
+      - mongodb_root_password
+      - mongodb_password
+    user: $PUID:$PGID
+  unifi-network-application:
+    container_name: unifi-network-application
+    depends_on:
+      unifi-db:
+        condition: service_started
+        required: true
+    env_file:
+      - .env
+    environment:
+      MONGO_PASS_FILE: /run/secrets/mongodb_password
+    image: ghcr.io/x24git/unifi-network-controller-docker
+    secrets:
+      - mongodb_password
+    ports:
+      - name: portal
+        target: 8443
+        published: "8443"
+        protocol: tcp
+        app_protocol: https
+        host_ip: 127.0.0.1
+      - name: STUN
+        target: 3478
+        published: "3478"
+        protocol: udp
+      - name: AP discovery
+        target: 10001
+        published: "10001"
+        protocol: udp
+      - name: Device Inform (discovery)
+        target: 8080
+        published: "8080"
+        protocol: tcp
+      # - target: 1900 #optional
+      #   published: "1900"
+      #   protocol: udp
+      # - target: 8843 #optional
+      #   published: "8843"
+      #   protocol: tcp
+      # - target: 8880 #optional
+      #   published: "8880"
+      #   protocol: tcp
+      - name: Throughput Testing
+        target: 6789 #optional
+        published: "6789"
+        protocol: tcp
+      # - target: 5514 #optional
+      #   published: "5514"
+      #   protocol: udp
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "-k", "https://unifi-network-application:8443/" ]
+      interval: 1m
+      timeout: 30s
+      retries: 3
+      start_period: 1m30s
+    volumes:
+      - type: bind
+        source: $UNIFI_ROOT_DIR
+        target: /unifi
+    networks:
+      - unifi-bridge
+    privileged: false
+
+networks:
+  unifi-bridge:
+    driver: bridge
+
+configs:
+  init-mongo.js:
+    content: |
+      db.createUser({ user: "${MONGO_USER}",pwd: "${MONGO_PASS}",roles: [{ db: "${MONGO_DBNAME}", role: "dbOwner" },{ db: "${MONGO_DBNAME}_stat", role: "dbOwner" }]})
+
+secrets:
+  mongodb_root_password:
+    environment: "MONGO_ROOT_PASSWD"
+  mongodb_password:
+    environment: "MONGO_DB_PASSWD"
