@@ -3,8 +3,8 @@ FROM debian:bookworm-slim
 ARG BUILD_DATE \
     UNIFI_VERSION \
     UNIFI_BRANCH="stable" \
-    UNIFI_GID="999" \
-    UNIFI_UID="999" 
+    UNIFI_GID="980" \
+    UNIFI_UID="980" 
 
 LABEL maintainer="x24git"
 
