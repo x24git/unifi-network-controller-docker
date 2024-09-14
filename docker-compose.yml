@@ -104,6 +104,6 @@ configs:
 
 secrets:
   mongodb_root_password:
-    file: ./db/.root_pass
+    environment: "MONGO_ROOT_PASSWD"
   mongodb_password:
-    file: ./db/.db_pass
+    environment: "MONGO_DB_PASSWD"
